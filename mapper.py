@@ -9,10 +9,9 @@ def read_input(file):
         yield line
 
 def main():
-    #data = read_input(sys.stdin)
-    for triple in sys.stdin:
-        # print("FOOOOO" ,triple)
-        # create file like object
+    data = read_input(sys.stdin)
+    for triple in data:
+        triple = triple.replace('.\n', '.')
         flo = StringIO(triple.decode('utf-8'))
         graph = Graph()
         graph.parse(flo, format="nt")
