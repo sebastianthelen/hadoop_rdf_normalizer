@@ -11,11 +11,11 @@ def read_input(file):
 def main():
     #data = read_input(sys.stdin)
     for triple in sys.stdin:
-        print("FOOOOO" ,triple)
+        # print("FOOOOO" ,triple)
         # create file like object
-        flo = StringIO(triple)
+        flo = StringIO(triple.decode('utf-8'))
         graph = Graph()
-        graph.parse(triple, format="nt")
+        graph.parse(flo, format="nt")
         for subject, predicate, obj in graph:
             print ('%s\t%s' % (obj, triple))
 
