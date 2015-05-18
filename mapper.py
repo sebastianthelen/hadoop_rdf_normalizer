@@ -9,13 +9,12 @@ def read_input(file):
         yield line
 
 def main():
-    #data = read_input(sys.stdin)
-    for triple in sys.stdin:
-        print("FOOOOO" ,triple)
-        # create file like object
-        flo = StringIO(triple)
+    data = read_input(sys.stdin)
+    for triple in data:
+        triple = triple.replace('.\n', '.')
+        flo = StringIO(triple.decode('utf-8'))
         graph = Graph()
-        graph.parse(triple, format="nt")
+        graph.parse(flo, format="nt")
         for subject, predicate, obj in graph:
             print ('%s\t%s' % (obj, triple))
 
