@@ -23,7 +23,7 @@ def reduce():
             # load triple triple into temp graph
             # for easier processing
             tmp_graph = Graph()
-            tmp_graph.parse(StringIO(triple.decode('utf-8')),
+            tmp_graph.parse(data=triple,
                             format="nt")
             # get triple from temporary graph
             for sub, pred, obj in tmp_graph:
@@ -35,7 +35,7 @@ def reduce():
             # load triple triple into temp graph
             # for easier processing
             tmp_graph = Graph()
-            tmp_graph.parse(StringIO(triple.decode('utf-8')),
+            tmp_graph.parse(data=triple,
                             format="nt")
             # get triple from temporary graph
             for sub, pred, obj in tmp_graph:
@@ -60,22 +60,22 @@ def replaceObjectUri(graph):
         sameas_stmnt = None
         try:
             # owl:sameAs statement with cellar id as subject
-            sameas_stmnt = results.next()
+            sameas_stmnt = next(results)
         except StopIteration:
             # no owl:sameAs statement found
             pass
         # nothing to replace
         if sameas_stmnt is None:
-            print formatAsUri(subj), formatAsUri(pred), formatAsUri(obj)
+            print(formatAsUri(subj), formatAsUri(pred), repr(formatAsUri(obj)).strip("'"), '.')
         # replace obj by cellar_id
         else:
             sameas_subj = sameas_stmnt[0]
             # filter reflexive statements
             if str(sameas_subj) != str(subj) and str(pred) != str(OWL.sameAs):
-                print formatAsUri(subj), formatAsUri(pred), formatAsUri(sameas_subj)
+                print(formatAsUri(subj), formatAsUri(pred), formatAsUri(sameas_subj), '.')
             # original owl:sameAs statement should be printed once
             if not(flag):
-                print formatAsUri(subj), formatAsUri(OWL.sameAs), formatAsUri(obj)
+                print(formatAsUri(subj), formatAsUri(OWL.sameAs), formatAsUri(obj), '.')
                 flag = True
 
 
