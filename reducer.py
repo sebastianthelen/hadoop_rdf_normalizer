@@ -6,10 +6,11 @@ from rdflib.graph import Graph
 from rdflib import Literal
 import rdflib
 from io import StringIO
+from argparse import ArgumentParser
 
 # input for the reducer is a set of <obj, triple>
 # key/value pairs ordered by obj identifiers
-def reduce():
+def reduce(mode='object'):
     # input comes from stdin
     previous_key = None
     graph = None
@@ -30,7 +31,10 @@ def reduce():
                 # add to current graph
                 graph.add((sub, pred, obj))
         else:
-            replaceObjectUri(graph)
+            if mode == 'object':
+                replaceObjectUri(graph)
+            elif mode == 'subject':
+                replaceSubjectUri(graph)
             graph = Graph()
             # load triple triple into temp graph
             # for easier processing
@@ -42,13 +46,21 @@ def reduce():
                 # add to current graph
                 graph.add((sub, pred, obj))
         previous_key = current_key
-    replaceObjectUri(graph)
+    if mode == 'object':
+        replaceObjectUri(graph)
+    elif mode == 'subject':
+        replaceSubjectUri(graph)
 
 
 def formatAsUri(resource):
     if isinstance(resource, rdflib.term.Literal):
-        return '"%s"^^<%s>' % (resource, Literal(resource.datatype))
-    else:
+        if str(Literal(resource.datatype)) != str(None):
+            return '"%s"^^<%s>' % (resource, Literal(resource.datatype))
+        else:
+            return '"%s"' % resource
+    elif isinstance(resource, rdflib.term.BNode):
+        return '_:%s' % resource
+    else: 
         return '<%s>' % resource
 
 
@@ -69,15 +81,42 @@ def replaceObjectUri(graph):
             print(formatAsUri(subj), formatAsUri(pred), repr(formatAsUri(obj)).strip("'"), '.')
         # replace obj by cellar_id
         else:
-            sameas_subj = sameas_stmnt[0]
+            cellar_id = sameas_stmnt[0]
             # filter reflexive statements
-            if str(sameas_subj) != str(subj) and str(pred) != str(OWL.sameAs):
-                print(formatAsUri(subj), formatAsUri(pred), formatAsUri(sameas_subj), '.')
+            if str(cellar_id) != str(subj) and str(pred) != str(OWL.sameAs):
+                print(formatAsUri(subj), formatAsUri(pred), formatAsUri(cellar_id), '.')
             # original owl:sameAs statement should be printed once
             if not(flag):
                 print(formatAsUri(subj), formatAsUri(OWL.sameAs), formatAsUri(obj), '.')
                 flag = True
 
 
+def replaceSubjectUri(graph):
+    for subj, pred, obj in graph:
+        # determine subj's cellar id, if it exists (owl:sameAs)
+        results = graph.triples((None, OWL.sameAs, subj))
+        sameas_stmnt = None
+        try:
+            # owl:sameAs statement with cellar id as subject
+            sameas_stmnt = next(results)
+        except StopIteration:
+            # no owl:sameAs statement found
+            pass
+        # nothing to replace
+        if sameas_stmnt is None:
+            print(formatAsUri(subj), formatAsUri(pred), repr(formatAsUri(obj)).strip("'"), '.')
+        # replace obj by cellar_id
+        else:
+            cellar_id = sameas_stmnt[0]
+            print(formatAsUri(cellar_id), formatAsUri(pred), formatAsUri(obj), '.')
+
+
 if __name__ == "__main__":
-    reduce()
+    import sys
+    import codecs
+    sys.stdout = codecs.getwriter('utf8')(sys.stdout)
+    sys.stderr = codecs.getwriter('utf8')(sys.stderr)
+    argParser = ArgumentParser(description='MapReduce RDF normalizer.')
+    argParser.add_argument('-m', '--mode', help='subject or object normalization', required=True, choices=['subject', 'object'])
+    args = argParser.parse_args()
+    reduce(args.mode)
