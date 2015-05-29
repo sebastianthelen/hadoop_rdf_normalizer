@@ -4,11 +4,24 @@ from rdflib.graph import Graph
 from rdflib import Literal
 import rdflib
 from argparse import ArgumentParser
+from rdflib import OWL
+
+
+def formatAsUri(resource):
+    if isinstance(resource, rdflib.term.Literal):
+        if str(Literal(resource.datatype)) != str(None):
+            return (('"%s"^^<%s>' % (resource, Literal(resource.datatype))).encode('unicode_escape').decode('ascii'))
+        else:
+            return ('"%s"' % resource).encode('unicode_escape').decode('ascii')
+    elif isinstance(resource, rdflib.term.BNode):
+        return ('_:%s' % resource).encode('unicode_escape').decode('ascii')
+    else: 
+        return ('<%s>' % resource).encode('unicode_escape').decode('ascii')
+
 
 def map(filename, mode='object'):
     with open(filename, encoding='utf-8') as file:
         for count, triple in enumerate(file):
-            #print('sss', count, triple)
             # get rid of blank lines
             triple = triple.rstrip('\n')
             # load triples into rdflib model
@@ -31,29 +44,32 @@ def map(filename, mode='object'):
                 if isinstance(key, rdflib.term.Literal):
                     if str(Literal(key.datatype)) != str(None):
                         # typed literals
-                        print(repr('"%s"^^<%s>' % (key, Literal(key.datatype))).strip("'"),
+                        print(('"%s"^^<%s>' % (key, Literal(key.datatype))).encode('unicode_escape').decode('ascii'),
                               '\t',
-                              repr('%s' % triple).strip("'"))
+                              ('%s' % graph.serialize(format='nt').decode('ascii').rstrip('\n')))
                     else:
                         # untyped literals
-                        print(repr('"%s"' % key).strip("'"),
+                        print(('"%s"' % key).encode('unicode_escape').decode('ascii'),
                               '\t',
-                              repr('%s' % triple).strip("'"))
+                              ('%s' % graph.serialize(format='nt').decode('ascii').rstrip('\n')))
                 else:
+                    # blank nodes
                     if isinstance(key, rdflib.term.BNode):
-                        print(repr('_:%s' % key).strip("'"),
+                        print(('_:%s' % key).encode('unicode_escape').decode('ascii'),
                               '\t',
-                              repr('%s' % triple).strip("'"))
+                              ('%s' % graph.serialize(format='nt').decode('ascii').rstrip('\n')))
+                    # regular statements
                     else:
-                        print(repr('<%s>' % key).strip("'"),
+                        print(('<%s>' % key).encode('unicode_escape').decode('ascii'),
                               '\t',
-                              repr('%s' % triple).strip("'"))
+                              ('%s' % graph.serialize(format='nt').decode('ascii').rstrip('\n')))
+                        # sameAs statements
+                        if pred == OWL.sameAs and mode == 'subject':
+                            tmp_graph = Graph()
+                            tmp_graph.add((obj, pred, subj))
+                            print(formatAsUri(obj), '\t', tmp_graph.serialize(format='nt').decode('ascii').rstrip('\n'))
 
 if __name__ == "__main__":
-    import sys
-    import codecs
-    sys.stdout = codecs.getwriter('utf8')(sys.stdout)
-    sys.stderr = codecs.getwriter('utf8')(sys.stderr)
     argParser = ArgumentParser(description='MapReduce RDF normalizer.')
     argParser.add_argument('-m', '--mode', help='subject or object normalization', required=True, choices=['subject', 'object'])
     argParser.add_argument('-f', '--file', help='filename', required=True)
