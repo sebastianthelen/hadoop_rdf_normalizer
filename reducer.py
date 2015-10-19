@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# ADD QUAD SUPPORT
+
 import sys
 from rdflib import OWL
 from rdflib.graph import Graph
