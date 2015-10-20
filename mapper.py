@@ -65,8 +65,8 @@ def map(mode):
                           '\t', ('%s' % ds.serialize(format='nquads').decode('ascii').rstrip('\n')))
                     # sameAs statements
                     if pred == OWL.sameAs and mode == 'subject':
-                        tmp_graph = rdflib.Datatset()
-                        tmp_graph((obj, pred, subj, name))
+                        tmp_graph = rdflib.Dataset()
+                        tmp_graph.add((obj, pred, subj, name))
                         print(formatAsUri(obj), '\t', tmp_graph.serialize(format='nquads').decode('ascii').rstrip('\n'))
 
 if __name__ == "__main__":
