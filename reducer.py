@@ -1,13 +1,8 @@
 #!/usr/bin/env python
 
-# ADD QUAD SUPPORT
-
 import sys
-from rdflib import OWL
-from rdflib.graph import Graph
-from rdflib import Literal
 import rdflib
-from io import StringIO
+from rdflib import OWL
 from argparse import ArgumentParser
 
 # input for the reducer is a set of ordered
@@ -15,8 +10,8 @@ from argparse import ArgumentParser
 def reduce(mode='object'):
     # input comes from stdin
     previous_key = None
-    graph = Graph()
-    # load a triples with same _key into a model
+    ds = rdflib.Dataset()
+    # load a quad with same _key into a model
     for line in sys.stdin:
         line = line.strip()
         current_key, triple = line.split('\t', 1)
@@ -24,34 +19,33 @@ def reduce(mode='object'):
         # been completely processed
         if current_key != previous_key and previous_key != None:
             if mode == 'object':
-                #print('gggg', graph.serialize(format='nt'))
-                replaceObjectUri(graph)
+                replaceObjectUri(ds)
             elif mode == 'subject':
-                replaceSubjectUri(graph)
+                replaceSubjectUri(ds)
             # clear graph
-            graph = Graph()
-        # load triple triple into temp graph
+            ds = rdflib.Dataset()
+        # load quad triple into temp graph
         # for easier processing
-        tmp_graph = Graph()
+        tmp_graph = rdflib.Dataset()
         tmp_graph.parse(data=triple,
-                        format="nt")
-        # get triple from temporary graph
-        for sub, pred, obj in tmp_graph:
+                        format="nquads")
+        # get quads from temporary graph
+        for sub, pred, obj, name in tmp_graph.quads(
+                (None, None, None, None)):
             # add to current graph
-            graph.add((sub, pred, obj))
+            ds.add((sub, pred, obj, name))
         previous_key = current_key
     if mode == 'object':
-        #print('gggg', graph)
-        replaceObjectUri(graph)
+        replaceObjectUri(ds)
     elif mode == 'subject':
-        replaceSubjectUri(graph)
+        replaceSubjectUri(ds)
 
 
-def replaceObjectUri(graph):
-    for subj, pred, obj in graph:
-        tmp_graph = Graph()
+def replaceObjectUri(ds):
+    for subj, pred, obj, name in ds.quads((None, None, None, None)):
+        tmp_ds = rdflib.Dataset()
         # determine obj's cellar id, if it exists (owl:sameAs)
-        results = graph.triples((None, OWL.sameAs, obj))
+        results = ds.quads((None, OWL.sameAs, obj, None))
         sameas_stmnt = None
         try:
             # owl:sameAs statement with cellar id as subject
@@ -61,23 +55,23 @@ def replaceObjectUri(graph):
             pass
         # nothing to replace
         if sameas_stmnt is None:
-            tmp_graph.add((subj, pred, obj))
+            tmp_ds.add((subj, pred, obj, name))
         # replace obj by cellar_id
         else:
             cellar_id = sameas_stmnt[0]
             # filter reflexive statements
             if str(cellar_id) != str(subj) and str(pred) != str(OWL.sameAs):
-                tmp_graph.add((subj, pred, cellar_id))
+                tmp_ds.add((subj, pred, cellar_id, name))
             # original owl:sameAs statement should be printed once
             else:
-                tmp_graph.add((subj, pred, obj))
-        print(tmp_graph.serialize(format='nt').decode('ascii').rstrip('\n'))
+                tmp_ds.add((subj, pred, obj, name))
+        print(tmp_ds.serialize(format='nquads').decode('ascii').rstrip('\n'))
 
-def replaceSubjectUri(graph):
-    for subj, pred, obj in graph:
-        tmp_graph = Graph()
+def replaceSubjectUri(ds):
+    for subj, pred, obj, name in ds.quads((None, None, None, None)):
+        tmp_graph = rdflib.Dataset()
         # determine subj's cellar id, if it exists (owl:sameAs)
-        results = graph.triples((subj, OWL.sameAs, None))
+        results = ds.quads((subj, OWL.sameAs, None, None))
         sameas_stmnt = None
         try:
             # owl:sameAs statement with cellar id as subject
@@ -87,12 +81,12 @@ def replaceSubjectUri(graph):
             pass
         # nothing to replace
         if sameas_stmnt is None or pred == OWL.sameAs or '/cellar/' in str(subj):
-            tmp_graph.add((subj, pred, obj))
+            tmp_graph.add((subj, pred, obj, name))
         # replace obj by cellar_id
         else:
             cellar_id = sameas_stmnt[2]
-            tmp_graph.add((cellar_id, pred, obj))
-        print(tmp_graph.serialize(format='nt').decode('ascii').rstrip('\n'))
+            tmp_graph.add((cellar_id, pred, obj, name))
+        print(tmp_graph.serialize(format='nquads').decode('ascii').rstrip('\n'))
 
 
 if __name__ == "__main__": 

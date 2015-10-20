@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import sys
-from rdflib.graph import Graph
 from rdflib import Literal
 import rdflib
 from argparse import ArgumentParser
@@ -24,23 +23,23 @@ def read_input(stdin):
         yield line
 
 
-def map(mode='object'):
+def map(mode):
     data = read_input(sys.stdin)
-    for triple in data:
+    for quad in data:
         # get rid of blank lines
-        triple = triple.rstrip('\n')
+        quad = quad.rstrip('\n')
         # load triples into rdflib model
         # --> easier processing
-        graph = Graph()
+        ds = rdflib.Dataset()
         try:
-            graph.parse(data=triple, format="nt")
+            ds.parse(data=quad, format='nquads')
         except Exception as e:
-            print (triple, e)
+            print (quad, e)
             sys.exit()
-        # there is actually just one triple
+        # there is actually just one statement
         # in the graph
-        for subj, pred, obj in graph:
-            # <key, value> = <obj, triple>
+        for subj, pred, obj, name in ds.quads((None, None, None, None)):
+            # <key, value> = <obj, statement>
             key = None
             if mode=='object':
                 key = obj
@@ -50,33 +49,30 @@ def map(mode='object'):
                 if str(Literal(key.datatype)) != str(None):
                     # typed literals
                     print(('"%s"^^<%s>' % (key, Literal(key.datatype))).encode('unicode_escape').decode('ascii'),
-                          '\t',
-                          ('%s' % graph.serialize(format='nt').decode('ascii').rstrip('\n')))
+                          '\t', ('%s' % ds.serialize(format='nquads').decode('ascii').rstrip('\n')))
                 else:
                     # untyped literals
                     print(('"%s"' % key).encode('unicode_escape').decode('ascii'),
-                          '\t',
-                          ('%s' % graph.serialize(format='nt').decode('ascii').rstrip('\n')))
+                          '\t', ('%s' % ds.serialize(format='nquads').decode('ascii').rstrip('\n')))
             else:
                 # blank nodes
                 if isinstance(key, rdflib.term.BNode):
                     print(('_:%s' % key).encode('unicode_escape').decode('ascii'),
-                          '\t',
-                          ('%s' % graph.serialize(format='nt').decode('ascii').rstrip('\n')))
+                          '\t', ('%s' % ds.serialize(format='nquads').decode('ascii').rstrip('\n')))
                 # regular statements
                 else:
                     print(('<%s>' % key).encode('unicode_escape').decode('ascii'),
-                          '\t',
-                          ('%s' % graph.serialize(format='nt').decode('ascii').rstrip('\n')))
+                          '\t', ('%s' % ds.serialize(format='nquads').decode('ascii').rstrip('\n')))
                     # sameAs statements
                     if pred == OWL.sameAs and mode == 'subject':
-                        tmp_graph = Graph()
-                        tmp_graph.add((obj, pred, subj))
-                        print(formatAsUri(obj), '\t', tmp_graph.serialize(format='nt').decode('ascii').rstrip('\n'))
+                        tmp_graph = rdflib.Datatset()
+                        tmp_graph((obj, pred, subj, name))
+                        print(formatAsUri(obj), '\t', tmp_graph.serialize(format='nquads').decode('ascii').rstrip('\n'))
 
 if __name__ == "__main__":
     argParser = ArgumentParser(description='MapReduce RDF normalizer.')
-    argParser.add_argument('-m', '--mode', help='subject or object normalization', required=True, choices=['subject', 'object'])
+    argParser.add_argument('-m', '--mode', help='subject or object normalization',
+                           required=True, choices=['subject', 'object'])
     #argParser.add_argument('-f', '--file', help='filename', required=True)
     args = argParser.parse_args()
     map(args.mode)
