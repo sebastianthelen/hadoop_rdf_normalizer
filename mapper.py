@@ -19,7 +19,6 @@ def formatAsUri(resource):
 
 def read_input(stdin):
     for line in stdin:
-        # split the line into words
         yield line
 
 
@@ -57,17 +56,20 @@ def map(mode):
             else:
                 # blank nodes
                 if isinstance(key, rdflib.term.BNode):
+                    print(key.skolemize())
                     print(('_:%s' % key).encode('unicode_escape').decode('ascii'),
                           '\t', ('%s' % ds.serialize(format='nquads').decode('ascii').rstrip('\n')))
                 # regular statements
                 else:
-                    print(('<%s>' % key).encode('unicode_escape').decode('ascii'),
-                          '\t', ('%s' % ds.serialize(format='nquads').decode('ascii').rstrip('\n')))
                     # sameAs statements
                     if pred == OWL.sameAs and mode == 'subject':
                         tmp_graph = rdflib.Dataset()
-                        tmp_graph.add((obj, pred, subj, name))
+                        tmp_graph.add((subj, pred, obj, name))
                         print(formatAsUri(obj), '\t', tmp_graph.serialize(format='nquads').decode('ascii').rstrip('\n'))
+                    else:
+                         print(('<%s>' % key).encode('unicode_escape').decode('ascii'),
+                          '\t', ('%s' % ds.serialize(format='nquads').decode('ascii').rstrip('\n')))
+
 
 if __name__ == "__main__":
     argParser = ArgumentParser(description='MapReduce RDF normalizer.')

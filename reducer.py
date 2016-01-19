@@ -71,7 +71,7 @@ def replaceSubjectUri(ds):
     for subj, pred, obj, name in ds.quads((None, None, None, None)):
         tmp_graph = rdflib.Dataset()
         # determine subj's cellar id, if it exists (owl:sameAs)
-        results = ds.quads((subj, OWL.sameAs, None, None))
+        results = ds.quads((None, OWL.sameAs, subj, None))
         sameas_stmnt = None
         try:
             # owl:sameAs statement with cellar id as subject
@@ -82,9 +82,9 @@ def replaceSubjectUri(ds):
         # nothing to replace
         if sameas_stmnt is None or pred == OWL.sameAs or '/cellar/' in str(subj):
             tmp_graph.add((subj, pred, obj, name))
-        # replace obj by cellar_id
+        # replace subj by cellar_id
         else:
-            cellar_id = sameas_stmnt[2]
+            cellar_id = sameas_stmnt[0]
             tmp_graph.add((cellar_id, pred, obj, name))
         print(tmp_graph.serialize(format='nquads').decode('ascii').rstrip('\n'))
 

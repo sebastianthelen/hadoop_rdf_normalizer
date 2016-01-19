@@ -21,7 +21,6 @@ def formatAsUri(resource):
 
 def read_input(stdin):
     for line in stdin:
-        # split the line into words
         yield line
 
 
@@ -65,7 +64,7 @@ def map(inverted_filters, mode='object', regex=None, literal=False, bnode=False)
 
 
 if __name__ == "__main__":
-    argParser = ArgumentParser(description='MapReduce RDF normalizer.')
+    argParser = ArgumentParser(description='RDF filter.')
     argParser.add_argument('-m', '--mode', help='subject or object normalization', required=True, choices=['subject', 'object'])
     argParser.add_argument('-l', '--literal', help='filter statements with literal values in object', dest='literal', action='store_true')
     argParser.add_argument('-b', '--bnode', help='filter statements with blank as subject/object', dest='bnode', action='store_true')
