@@ -1,9 +1,20 @@
 #!/usr/bin/env python
 
 import sys
+import logging
 import rdflib
 from rdflib import OWL
 from argparse import ArgumentParser
+
+
+def initLogger(name):
+    global LOGGER
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    ch = logging.StreamHandler()
+    LOGGER = logging.getLogger(name)
+    ch.setLevel(logging.ERROR)
+    ch.setFormatter(formatter)
+    LOGGER.addHandler(ch)
 
 # input for the reducer is a set of ordered
 # key/value pairs 
@@ -14,27 +25,35 @@ def reduce(mode='object'):
     # load a quad with same _key into a model
     for line in sys.stdin:
         line = line.strip()
-        current_key, triple = line.split('\t', 1)
-        # all lines having same key have
-        # been completely processed
-        if current_key != previous_key and previous_key != None:
-            if mode == 'object':
-                replaceObjectUri(ds)
-            elif mode == 'subject':
-                replaceSubjectUri(ds)
-            # clear graph
-            ds = rdflib.Dataset()
-        # load quad triple into temp graph
-        # for easier processing
-        tmp_graph = rdflib.Dataset()
-        tmp_graph.parse(data=triple,
-                        format="nquads")
-        # get quads from temporary graph
-        for sub, pred, obj, name in tmp_graph.quads(
-                (None, None, None, None)):
-            # add to current graph
-            ds.add((sub, pred, obj, name))
-        previous_key = current_key
+        try:
+            current_key, quad = line.split('\t', 1)
+
+            # all lines having same key have
+            # been completely processed
+            if current_key != previous_key and previous_key != None:
+                if mode == 'object':
+                    replaceObjectUri(ds)
+                elif mode == 'subject':
+                    replaceSubjectUri(ds)
+                # clear graph
+                ds = rdflib.Dataset()
+            # load quad quad into temp graph
+            # for easier processing
+            tmp_graph = rdflib.Dataset()
+            try:
+                tmp_graph.parse(data=quad,
+                            format="nquads")
+            except Exception as e:
+                print(quad, e)
+                sys.exit()
+            # get quads from temporary graph
+            for sub, pred, obj, name in tmp_graph.quads(
+                    (None, None, None, None)):
+                # add to current graph
+                ds.add((sub, pred, obj, name))
+            previous_key = current_key
+        except Exception as e:
+            LOGGER.exception('Error when processing input line: %s' % line)
     if mode == 'object':
         replaceObjectUri(ds)
     elif mode == 'subject':
@@ -93,4 +112,5 @@ if __name__ == "__main__":
     argParser = ArgumentParser(description='MapReduce RDF normalizer.')
     argParser.add_argument('-m', '--mode', help='subject or object normalization', required=True, choices=['subject', 'object'])
     args = argParser.parse_args()
+    initLogger("reducer.py")
     reduce(args.mode)
