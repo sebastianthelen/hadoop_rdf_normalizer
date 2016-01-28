@@ -54,6 +54,7 @@ def reduce(mode='object'):
             previous_key = current_key
         except Exception as e:
             LOGGER.exception('Error when processing input line: %s' % line)
+            sys.exit()
     if mode == 'object':
         replaceObjectUri(ds)
     elif mode == 'subject':

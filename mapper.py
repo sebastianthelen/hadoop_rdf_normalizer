@@ -76,6 +76,7 @@ def map(mode):
                               '\t', ('%s' % ds.serialize(format='nquads').decode('ascii').rstrip('\n')))
         except Exception as e:
             LOGGER.exception('Error when processing quad: %s' % quad)
+            sys.exit()
 
 if __name__ == "__main__":
     argParser = ArgumentParser(description='MapReduce RDF normalizer.')
